@@ -1,0 +1,8 @@
+{
+  "/admin/courses/[id]/videos/page": "app/admin/courses/[id]/videos/page.js",
+  "/my-requests/page": "app/my-requests/page.js",
+  "/page": "app/page.js",
+  "/courses/[id]/page": "app/courses/[id]/page.js",
+  "/watch/[courseId]/[videoId]/page": "app/watch/[courseId]/[videoId]/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}
