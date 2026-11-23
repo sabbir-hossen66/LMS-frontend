@@ -49,7 +49,9 @@ export default function CheckoutPage() {
     },
   });
 
-  const bkashNumber = settings?.bkash_number || '01712345678';
+  const bkashNumber = settings?.bkash_number || '01783780066';
+  const adminName = settings?.admin_name || 'Sabbir Hossen';
+  const supportEmail = settings?.support_email || 'sabbir.ms2000@gmail.com';
 
   const copyNumber = () => {
     navigator.clipboard.writeText(bkashNumber);
@@ -152,29 +154,41 @@ export default function CheckoutPage() {
               Open your <strong>bKash App</strong> and select <strong>Send Money</strong>.
             </li>
             <li>
-              Send exactly <strong>{formatPrice(course?.price || 0)}</strong> to our official number:
+              Send exactly <strong>{formatPrice(course?.price || 0)}</strong> to our official bKash account (Personal / Send Money):
             </li>
           </ol>
 
-          {/* Number copy box */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border font-mono text-sm font-bold">
-            <span className="text-foreground tracking-wider">{bkashNumber}</span>
-            <button
-              onClick={copyNumber}
-              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-muted text-primary transition-colors"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-emerald-500">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
+          {/* Number & Admin info copy box */}
+          <div className="p-3.5 rounded-xl bg-card border border-border space-y-2">
+            <div className="flex items-center justify-between font-mono text-sm font-bold">
+              <div>
+                <span className="text-[11px] font-sans font-normal text-muted-foreground block">
+                  bKash Number (Admin: {adminName})
+                </span>
+                <span className="text-foreground text-base tracking-wider">{bkashNumber}</span>
+              </div>
+              <button
+                onClick={copyNumber}
+                type="button"
+                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-sans font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-emerald-500">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+              <span>Recipient: <strong className="text-foreground">{adminName}</strong></span>
+              <span>Contact: <strong className="text-foreground">{supportEmail}</strong></span>
+            </div>
           </div>
 
           <p className="text-[11px] text-muted-foreground">

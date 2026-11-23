@@ -14,6 +14,9 @@ import {
   Eye,
   Loader2,
   ShieldAlert,
+  ShieldCheck,
+  ShieldMinus,
+  Shield,
   BookOpen,
   X,
 } from 'lucide-react';
@@ -23,14 +26,20 @@ export default function AdminStudentsPage() {
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [page, setPage] = useState(1);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   const { data: studentsData, isLoading } = useQuery({
-    queryKey: ['admin-students', page, search],
+    queryKey: ['admin-students', page, search, roleFilter],
     queryFn: async () => {
       const res = await apiClient.get('/users/students', {
-        params: { page, limit: 15, search: search || undefined },
+        params: {
+          page,
+          limit: 15,
+          search: search || undefined,
+          role: roleFilter === 'ALL' ? undefined : roleFilter,
+        },
       });
       return res.data.data;
     },
@@ -38,6 +47,23 @@ export default function AdminStudentsPage() {
   });
 
   const students = studentsData?.items || [];
+
+  const handleUpdateRole = async (userId: string, newRole: 'ADMIN' | 'STUDENT', userName: string) => {
+    const isPromoting = newRole === 'ADMIN';
+    const message = isPromoting
+      ? `Are you sure you want to promote "${userName}" to ADMIN? They will have full dashboard access.`
+      : `Are you sure you want to remove ADMIN privileges from "${userName}"? They will become a STUDENT.`;
+
+    if (!confirm(message)) return;
+
+    try {
+      await apiClient.patch(`/users/${userId}/role`, { role: newRole });
+      await queryClient.invalidateQueries({ queryKey: ['admin-students'] });
+      alert(`User role updated to ${newRole} successfully.`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || `Failed to update role for ${userName}`);
+    }
+  };
 
   const handleToggleBlock = async (studentId: string, currentStatus: boolean) => {
     const action = currentStatus ? 'unblock' : 'block';
@@ -78,35 +104,51 @@ export default function AdminStudentsPage() {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Student Directory</h1>
+          <h1 className="text-2xl font-bold tracking-tight">User & Student Directory</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Review student enrollments, inspect lesson progress, and block abusive accounts
+            Manage student enrollments, inspect progress, toggle access, and assign/remove admin roles
           </p>
         </div>
 
-        {/* Search */}
-        <div className="relative w-full sm:w-64">
-          <input
-            type="text"
-            placeholder="Search by name, email, phone..."
-            value={search}
+        {/* Filters */}
+        <div className="flex items-center space-x-3 w-full sm:w-auto">
+          <select
+            value={roleFilter}
             onChange={(e) => {
-              setSearch(e.target.value);
+              setRoleFilter(e.target.value);
               setPage(1);
             }}
-            className="w-full px-3.5 py-2 pl-9 rounded-xl border border-border bg-card text-xs focus:ring-2 focus:ring-primary"
-          />
-          <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-3" />
+            className="px-3 py-2 rounded-xl border border-border bg-card text-xs focus:ring-2 focus:ring-primary font-medium"
+          >
+            <option value="ALL">All Roles</option>
+            <option value="STUDENT">Students Only</option>
+            <option value="ADMIN">Admins Only</option>
+          </select>
+
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search name, email, phone..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="w-full px-3.5 py-2 pl-9 rounded-xl border border-border bg-card text-xs focus:ring-2 focus:ring-primary"
+            />
+            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-3" />
+          </div>
         </div>
       </div>
 
-      {/* Students Table */}
+      {/* Users Table */}
       <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase font-bold text-[10px] tracking-wider">
               <tr>
-                <th className="p-4">Student</th>
+                <th className="p-4">User</th>
+                <th className="p-4">Role</th>
                 <th className="p-4">Phone</th>
                 <th className="p-4">Joined</th>
                 <th className="p-4">Enrollments</th>
@@ -117,67 +159,125 @@ export default function AdminStudentsPage() {
             <tbody className="divide-y divide-border/60">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center">
+                  <td colSpan={7} className="p-8 text-center">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                   </td>
                 </tr>
               ) : students.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                    No students found matching your search.
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    No users found matching your search.
                   </td>
                 </tr>
               ) : (
-                students.map((s: any) => (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-4">
-                      <p className="font-bold text-foreground">{s.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{s.email}</p>
-                    </td>
-                    <td className="p-4 font-mono text-muted-foreground">{s.phone}</td>
-                    <td className="p-4 text-muted-foreground">
-                      {new Date(s.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="p-4 font-semibold text-primary">
-                      {s._count?.enrollments || 0} active
-                    </td>
-                    <td className="p-4">
-                      {s.isBlocked ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive">
-                          BLOCKED
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500">
-                          ACTIVE
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() => inspectStudent(s.id)}
-                        className="p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground"
-                        title="Inspect Progress"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleToggleBlock(s.id, s.isBlocked)}
-                        className={`p-1.5 rounded-lg border ${
-                          s.isBlocked
-                            ? 'border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10'
-                            : 'border-destructive/30 text-destructive hover:bg-destructive/10'
-                        }`}
-                        title={s.isBlocked ? 'Unblock Student' : 'Block Student'}
-                      >
-                        {s.isBlocked ? (
-                          <CheckCircle className="w-3.5 h-3.5" />
+                students.map((s: any) => {
+                  const isSuperAdmin = s.email === 'sabbir.ms2000@gmail.com';
+                  const isSelf = s.id === user?.id;
+
+                  return (
+                    <tr key={s.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center space-x-2">
+                          <div>
+                            <p className="font-bold text-foreground flex items-center space-x-1.5">
+                              <span>{s.name}</span>
+                              {isSuperAdmin && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 font-semibold">
+                                  Primary
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">{s.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        {s.role === 'ADMIN' ? (
+                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                            <Shield className="w-3 h-3" />
+                            <span>ADMIN</span>
+                          </span>
                         ) : (
-                          <Ban className="w-3.5 h-3.5" />
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground">
+                            STUDENT
+                          </span>
                         )}
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="p-4 font-mono text-muted-foreground">{s.phone}</td>
+                      <td className="p-4 text-muted-foreground">
+                        {new Date(s.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 font-semibold text-primary">
+                        {s._count?.enrollments || 0} active
+                      </td>
+                      <td className="p-4">
+                        {s.isBlocked ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive">
+                            BLOCKED
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500">
+                            ACTIVE
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right space-x-1.5">
+                        <button
+                          onClick={() => inspectStudent(s.id)}
+                          className="p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                          title="Inspect Progress"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Promote / Demote Role Button */}
+                        {s.role === 'STUDENT' ? (
+                          <button
+                            onClick={() => handleUpdateRole(s.id, 'ADMIN', s.name)}
+                            className="p-1.5 rounded-lg border border-purple-500/30 text-purple-600 hover:bg-purple-500/10"
+                            title="Promote to Admin"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                          </button>
+                        ) : isSuperAdmin || isSelf ? (
+                          <span
+                            className="p-1.5 rounded-lg border border-transparent opacity-40 cursor-not-allowed inline-block"
+                            title={isSuperAdmin ? 'Primary Administrator (Cannot be removed)' : 'Your own account'}
+                          >
+                            <Shield className="w-3.5 h-3.5 text-purple-400" />
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleUpdateRole(s.id, 'STUDENT', s.name)}
+                            className="p-1.5 rounded-lg border border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                            title="Remove Admin Privileges"
+                          >
+                            <ShieldMinus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {/* Block / Unblock Button */}
+                        {!isSuperAdmin && !isSelf && (
+                          <button
+                            onClick={() => handleToggleBlock(s.id, s.isBlocked)}
+                            className={`p-1.5 rounded-lg border ${
+                              s.isBlocked
+                                ? 'border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10'
+                                : 'border-destructive/30 text-destructive hover:bg-destructive/10'
+                            }`}
+                            title={s.isBlocked ? 'Unblock Account' : 'Block Account'}
+                          >
+                            {s.isBlocked ? (
+                              <CheckCircle className="w-3.5 h-3.5" />
+                            ) : (
+                              <Ban className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
