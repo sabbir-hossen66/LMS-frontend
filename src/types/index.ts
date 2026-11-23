@@ -21,6 +21,8 @@ export interface Video {
   courseId: string;
   title: string;
   description?: string;
+  thumbnailUrl?: string | null;
+  isFreePreview?: boolean;
   order: number;
   duration: number;
   storageKey?: string;

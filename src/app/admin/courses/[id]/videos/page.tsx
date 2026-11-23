@@ -14,9 +14,11 @@ import {
   Plus,
   Trash2,
   Video as VideoIcon,
+  Image as ImageIcon,
   Loader2,
   CheckCircle,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 
 export default function CourseVideosManagementPage() {
@@ -32,6 +34,9 @@ export default function CourseVideosManagementPage() {
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDesc, setVideoDesc] = useState('');
   const [order, setOrder] = useState('1');
+  const [videoThumbnailUrl, setVideoThumbnailUrl] = useState<string | null>(null);
+  const [isUploadingThumb, setIsUploadingThumb] = useState(false);
+  const [isFreePreview, setIsFreePreview] = useState(false);
   const [uploadedStorageKey, setUploadedStorageKey] = useState<string | null>(null);
   const [detectedDuration, setDetectedDuration] = useState<number>(0);
   const [detectedMime, setDetectedMime] = useState<string>('video/mp4');
@@ -45,6 +50,26 @@ export default function CourseVideosManagementPage() {
     },
     enabled: user?.role === 'ADMIN',
   });
+
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingThumb(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await apiClient.post('/videos/upload-thumbnail', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setVideoThumbnailUrl(res.data.data.thumbnailUrl);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Thumbnail image upload failed');
+    } finally {
+      setIsUploadingThumb(false);
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,6 +112,8 @@ export default function CourseVideosManagementPage() {
         courseId,
         title: videoTitle.trim(),
         description: videoDesc.trim() || undefined,
+        thumbnailUrl: videoThumbnailUrl || undefined,
+        isFreePreview,
         order: parseInt(order, 10) || 1,
         duration: detectedDuration,
         storageKey: uploadedStorageKey,
@@ -96,6 +123,8 @@ export default function CourseVideosManagementPage() {
       // Reset
       setVideoTitle('');
       setVideoDesc('');
+      setVideoThumbnailUrl(null);
+      setIsFreePreview(false);
       setUploadedStorageKey(null);
       setDetectedDuration(0);
 
@@ -190,6 +219,42 @@ export default function CourseVideosManagementPage() {
             )}
           </div>
 
+          {/* Video Thumbnail Uploader */}
+          <div className="pt-2 border-t border-border">
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">
+              Video Thumbnail Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={isUploadingThumb}
+              onChange={handleThumbnailUpload}
+              className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-2.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-muted file:text-foreground hover:file:opacity-80 cursor-pointer"
+            />
+            {isUploadingThumb && (
+              <p className="text-xs text-primary mt-1 flex items-center space-x-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Uploading thumbnail...</span>
+              </p>
+            )}
+            {videoThumbnailUrl && (
+              <div className="mt-2 relative w-full h-24 rounded-xl overflow-hidden border border-border">
+                <img
+                  src={videoThumbnailUrl}
+                  alt="Thumbnail Preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setVideoThumbnailUrl(null)}
+                  className="absolute top-1 right-1 bg-black/60 text-white p-1 rounded-full text-[10px]"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+
           <form onSubmit={handleCreateVideo} className="space-y-3 pt-2">
             <div>
               <label className="text-xs font-semibold text-muted-foreground block mb-1">
@@ -232,6 +297,21 @@ export default function CourseVideosManagementPage() {
               />
             </div>
 
+            {/* Free Preview Toggle */}
+            <div className="flex items-center space-x-2 pt-1">
+              <input
+                type="checkbox"
+                id="isFreePreview"
+                checked={isFreePreview}
+                onChange={(e) => setIsFreePreview(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+              />
+              <label htmlFor="isFreePreview" className="text-xs font-semibold text-foreground cursor-pointer flex items-center space-x-1">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Allow Free Preview for Guests/Students</span>
+              </label>
+            </div>
+
             <button
               type="submit"
               disabled={!uploadedStorageKey}
@@ -256,12 +336,31 @@ export default function CourseVideosManagementPage() {
                 key={vid.id}
                 className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/40 transition-all shadow-sm"
               >
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
-                    {vid.order || idx + 1}
+                <div className="flex items-center space-x-3.5">
+                  {/* Thumbnail / Order preview */}
+                  <div className="w-16 h-10 rounded-lg overflow-hidden bg-muted relative shrink-0 border border-border/80">
+                    {vid.thumbnailUrl ? (
+                      <img
+                        src={vid.thumbnailUrl}
+                        alt={vid.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-xs">
+                        {vid.order || idx + 1}
+                      </div>
+                    )}
                   </div>
+
                   <div>
-                    <h4 className="text-sm font-semibold">{vid.title}</h4>
+                    <h4 className="text-sm font-semibold flex items-center space-x-2">
+                      <span>{vid.title}</span>
+                      {vid.isFreePreview && (
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                          PREVIEW
+                        </span>
+                      )}
+                    </h4>
                     <span className="text-[11px] font-mono text-muted-foreground">
                       {formatDuration(vid.duration)}
                     </span>
