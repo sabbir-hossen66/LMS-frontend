@@ -437,6 +437,46 @@ export function VideoPlayer({
     return () => clearTimeout(timer);
   }, [autoplayCountdown, onNext]);
 
+  // Detect if streamUrl is a YouTube link
+  const youtubeEmbedUrl = React.useMemo(() => {
+    if (!streamUrl) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = streamUrl.match(regExp);
+    return match && match[2].length === 11
+      ? `https://www.youtube-nocookie.com/embed/${match[2]}?autoplay=1&rel=0&modestbranding=1`
+      : null;
+  }, [streamUrl]);
+
+  if (youtubeEmbedUrl) {
+    return (
+      <div
+        className={`relative group select-none overflow-hidden bg-black rounded-2xl shadow-2xl transition-all duration-300 ${
+          isTheater ? 'w-full max-h-[85vh] aspect-[21/9]' : 'w-full aspect-video'
+        }`}
+      >
+        <iframe
+          src={youtubeEmbedUrl}
+          title={title}
+          className="w-full h-full border-0 rounded-2xl"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+        {/* Dynamic Watermark Overlay */}
+        {user && (
+          <div
+            style={{
+              top: `${watermarkPos.top}%`,
+              left: `${watermarkPos.left}%`,
+            }}
+            className="absolute pointer-events-none z-20 text-[11px] font-mono text-white/30 select-none bg-black/40 px-2.5 py-0.5 rounded backdrop-blur-xs transition-all duration-1000"
+          >
+            {user.email || user.name} • Antigravity LMS
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}

@@ -44,6 +44,11 @@ export default function CourseVideosManagementPage() {
   const [detectedDuration, setDetectedDuration] = useState<number>(0);
   const [detectedMime, setDetectedMime] = useState<string>('video/mp4');
 
+  // Video source mode: FILE upload or external URL (YouTube/Vimeo/Cloud MP4)
+  const [videoSourceType, setVideoSourceType] = useState<'FILE' | 'URL'>('FILE');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [customDurationMinutes, setCustomDurationMinutes] = useState('10');
+
   // Fetch course details
   const { data: course, isLoading } = useQuery<Course>({
     queryKey: ['course-videos-admin', courseId],
@@ -97,7 +102,8 @@ export default function CourseVideosManagementPage() {
         setVideoTitle(file.name.replace(/\.[^/.]+$/, ''));
       }
     } catch (err: any) {
-      setUploadError(err.response?.data?.message || 'Video upload failed. Check extension and size.');
+      const msg = err.response?.data?.message || err.message || 'Video upload failed. Check extension and size.';
+      setUploadError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setIsUploading(false);
     }
@@ -105,8 +111,18 @@ export default function CourseVideosManagementPage() {
 
   const handleCreateVideo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadedStorageKey) {
-      alert('Please upload a video file first');
+    const finalStorageKey = videoSourceType === 'URL' ? externalUrl.trim() : uploadedStorageKey;
+    const finalDuration =
+      videoSourceType === 'URL'
+        ? (parseFloat(customDurationMinutes) || 10) * 60
+        : detectedDuration;
+
+    if (!finalStorageKey) {
+      alert(
+        videoSourceType === 'URL'
+          ? 'Please enter a valid video URL (e.g. YouTube or direct MP4 link)'
+          : 'Please select and upload a video file first',
+      );
       return;
     }
 
@@ -119,9 +135,9 @@ export default function CourseVideosManagementPage() {
         thumbnailUrl: videoThumbnailUrl || undefined,
         isFreePreview,
         order: parseInt(order, 10) || 1,
-        duration: detectedDuration,
-        storageKey: uploadedStorageKey,
-        mimeType: detectedMime,
+        duration: finalDuration,
+        storageKey: finalStorageKey,
+        mimeType: videoSourceType === 'URL' ? 'video/external' : detectedMime,
       });
 
       // Reset
@@ -130,6 +146,7 @@ export default function CourseVideosManagementPage() {
       setVideoThumbnailUrl(null);
       setIsFreePreview(false);
       setUploadedStorageKey(null);
+      setExternalUrl('');
       setDetectedDuration(0);
 
       await queryClient.invalidateQueries({ queryKey: ['course-videos-admin', courseId] });
@@ -204,31 +221,93 @@ export default function CourseVideosManagementPage() {
             </div>
           )}
 
-          {/* Video File Uploader */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground block mb-1">
-              Select Video File (.mp4, .webm)
-            </label>
-            <input
-              type="file"
-              accept="video/mp4,video/webm,video/quicktime"
-              disabled={isUploading}
-              onChange={handleFileUpload}
-              className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90 cursor-pointer"
-            />
-            {isUploading && (
-              <p className="text-xs text-primary mt-2 flex items-center space-x-1.5">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Uploading & detecting duration...</span>
-              </p>
-            )}
-            {uploadedStorageKey && (
-              <p className="text-xs text-emerald-500 mt-2 flex items-center space-x-1">
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>File uploaded ({formatDuration(detectedDuration)})</span>
-              </p>
-            )}
+          {/* Source Type Selector (File vs URL) */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-muted/60 border border-border text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setVideoSourceType('FILE')}
+              className={`py-1.5 px-3 rounded-lg transition-all ${
+                videoSourceType === 'FILE'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              📁 Upload File
+            </button>
+            <button
+              type="button"
+              onClick={() => setVideoSourceType('URL')}
+              className={`py-1.5 px-3 rounded-lg transition-all ${
+                videoSourceType === 'URL'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              🔗 YouTube / URL
+            </button>
           </div>
+
+          {videoSourceType === 'FILE' ? (
+            /* Video File Uploader */
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                Select Video File (.mp4, .mov, .webm, .mkv)
+              </label>
+              <input
+                type="file"
+                accept=".mp4,.webm,.mov,.mkv,.m4v,.avi,video/*"
+                disabled={isUploading}
+                onChange={handleFileUpload}
+                className="w-full text-xs text-muted-foreground file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90 cursor-pointer"
+              />
+              {isUploading && (
+                <p className="text-xs text-primary mt-2 flex items-center space-x-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Streaming file to server...</span>
+                </p>
+              )}
+              {uploadedStorageKey && (
+                <p className="text-xs text-emerald-500 mt-2 flex items-center space-x-1">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>File uploaded ready</span>
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Video URL (YouTube / Vimeo / Cloud MP4) */
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Video URL (YouTube Unlisted, Vimeo, or Direct MP4)
+                </label>
+                <input
+                  type="text"
+                  value={externalUrl}
+                  onChange={(e) => {
+                    setExternalUrl(e.target.value);
+                    if (!videoTitle && e.target.value) {
+                      setVideoTitle('Lesson Video');
+                    }
+                  }}
+                  placeholder="https://www.youtube.com/watch?v=... or https://.../video.mp4"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-xs focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Duration (Minutes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={customDurationMinutes}
+                  onChange={(e) => setCustomDurationMinutes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-xs focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Video Thumbnail Uploader */}
           <div className="pt-2 border-t border-border">
@@ -347,7 +426,10 @@ export default function CourseVideosManagementPage() {
 
             <button
               type="submit"
-              disabled={!uploadedStorageKey}
+              disabled={
+                isUploading ||
+                (videoSourceType === 'FILE' ? !uploadedStorageKey : !externalUrl.trim())
+              }
               className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
               Add Lesson to Course

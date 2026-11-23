@@ -40,8 +40,10 @@ export default function WatchPage() {
   const currentIndex = videos.findIndex((v) => v.id === currentVideo?.id);
   const nextVideo = currentIndex >= 0 && currentIndex < videos.length - 1 ? videos[currentIndex + 1] : null;
 
-  // Stream URL from authenticated NestJS Range endpoint
-  const streamUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/videos/${videoId}/stream`;
+  // Stream URL from authenticated NestJS Range endpoint or external direct/YouTube link
+  const streamUrl = currentVideo?.storageKey?.startsWith('http')
+    ? currentVideo.storageKey
+    : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/videos/${videoId}/stream`;
 
   const sendHeartbeat = useCallback(
     async (currentPosition: number, delta: number) => {

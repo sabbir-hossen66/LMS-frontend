@@ -77,7 +77,9 @@ export default function CourseDetailPage() {
   const activeVideoIdx = activeVideo ? videos.findIndex((v) => v.id === activeVideo.id) : 0;
   const canPlayActive = isEnrolled || Boolean(activeVideo?.isFreePreview) || activeVideoIdx === 0;
 
-  const currentStreamUrl = activeVideo
+  const currentStreamUrl = activeVideo?.storageKey?.startsWith('http')
+    ? activeVideo.storageKey
+    : activeVideo
     ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/videos/${activeVideo.id}/stream`
     : '';
 
