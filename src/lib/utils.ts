@@ -24,3 +24,14 @@ export function formatPrice(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount).replace('BDT', '৳');
 }
+
+export function getMediaUrl(path?: string | null): string {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+  const backendBase = apiBase.replace(/\/api\/v1\/?$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${backendBase}${cleanPath}`;
+}

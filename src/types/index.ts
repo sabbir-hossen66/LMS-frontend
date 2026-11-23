@@ -23,6 +23,7 @@ export interface Video {
   description?: string;
   thumbnailUrl?: string | null;
   isFreePreview?: boolean;
+  moduleName?: string;
   order: number;
   duration: number;
   storageKey?: string;
@@ -42,6 +43,7 @@ export interface Course {
   price: number;
   thumbnail?: string | null;
   status: CourseStatus;
+  contentStatus?: 'ONGOING' | 'COMPLETED' | string;
   isEnrolled?: boolean;
   totalVideos?: number;
   totalStudents?: number;

@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Course, Video } from '@/types';
-import { formatDuration, formatPrice } from '@/lib/utils';
+import { formatDuration, formatPrice, getMediaUrl } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { VideoPlayer } from '@/components/player/VideoPlayer';
 import {
@@ -20,6 +20,8 @@ import {
   Sparkles,
   Maximize2,
   ChevronRight,
+  Layers,
+  FolderOpen,
 } from 'lucide-react';
 
 export default function CourseDetailPage() {
@@ -79,10 +81,18 @@ export default function CourseDetailPage() {
     ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/videos/${activeVideo.id}/stream`
     : '';
 
-  const activeThumbnail =
+  const rawThumbnail =
     activeVideo?.thumbnailUrl ||
     course.thumbnail ||
     'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&auto=format&fit=crop&q=80';
+  const activeThumbnail = getMediaUrl(rawThumbnail);
+
+  const groupedModules = videos.reduce((acc, v) => {
+    const mod = v.moduleName || 'Module 1: Introduction';
+    if (!acc[mod]) acc[mod] = [];
+    acc[mod].push(v);
+    return acc;
+  }, {} as Record<string, Video[]>);
 
   const handleSelectVideo = (vid: Video, index: number) => {
     setSelectedVideo(vid);
@@ -228,12 +238,30 @@ export default function CourseDetailPage() {
       {/* Course Details & Pricing Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
         <div className="md:col-span-2 rounded-3xl border border-border bg-card p-6 sm:p-8 space-y-4">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            {course.contentStatus === 'COMPLETED' ? (
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Complete Course (সম্পূর্ণ কোর্স)</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Ongoing Course (চলমান কোর্স - নিয়মিত নতুন ভিডিও আসছে)</span>
+              </span>
+            )}
+          </div>
+
           <h1 className="text-2xl font-black tracking-tight">{course.title}</h1>
           <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
             {course.description}
           </p>
 
           <div className="flex flex-wrap items-center gap-6 pt-3 text-xs font-medium text-muted-foreground border-t border-border">
+            <div className="flex items-center space-x-1.5">
+              <Layers className="w-4 h-4 text-primary" />
+              <span>{Object.keys(groupedModules).length} Modules</span>
+            </div>
             <div className="flex items-center space-x-1.5">
               <BookOpen className="w-4 h-4 text-primary" />
               <span>{videos.length} Video Lessons</span>
@@ -286,101 +314,141 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Course Curriculum (with Video Thumbnails) */}
-      <section className="space-y-4">
+      {/* Course Curriculum (with Video Thumbnails & Modules) */}
+      <section className="space-y-6">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div>
-            <h2 className="text-xl font-bold tracking-tight">Course Curriculum</h2>
+            <h2 className="text-xl font-bold tracking-tight">Course Curriculum & Modules</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Click any free preview or lesson to watch above
+              Structured step-by-step learning modules with free preview lessons
             </p>
           </div>
-          <span className="text-xs font-semibold text-muted-foreground">
-            {videos.length} Modules
+          <span className="text-xs font-semibold text-primary px-3 py-1 bg-primary/10 rounded-full">
+            {Object.keys(groupedModules).length} Modules • {videos.length} Lessons
           </span>
         </div>
 
-        <div className="space-y-3">
-          {videos.length > 0 ? (
-            videos.map((vid, idx) => {
-              const canPlayThis = isEnrolled || Boolean(vid.isFreePreview) || idx === 0;
-              const isSelected = activeVideo?.id === vid.id;
-              const vidThumb = vid.thumbnailUrl || course.thumbnail;
-
+        <div className="space-y-6">
+          {Object.keys(groupedModules).length > 0 ? (
+            Object.entries(groupedModules).map(([moduleTitle, moduleVideos], mIdx) => {
+              const moduleDuration = moduleVideos.reduce((acc, v) => acc + (v.duration || 0), 0);
               return (
                 <div
-                  key={vid.id}
-                  onClick={() => handleSelectVideo(vid, idx)}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer gap-3 ${
-                    isSelected
-                      ? 'border-primary bg-primary/5 shadow-sm'
-                      : canPlayThis
-                      ? 'border-border bg-card hover:border-primary/50'
-                      : 'border-border/60 bg-muted/40 opacity-80'
-                  }`}
+                  key={moduleTitle}
+                  className="rounded-3xl border border-border bg-card/60 overflow-hidden shadow-sm space-y-3 p-4 sm:p-5"
                 >
-                  <div className="flex items-center space-x-3.5">
-                    {/* Video Thumbnail */}
-                    <div className="w-24 h-14 rounded-xl overflow-hidden bg-muted relative shrink-0 border border-border group">
-                      {vidThumb ? (
-                        <img
-                          src={vidThumb}
-                          alt={vid.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-xs">
-                          {vid.order || idx + 1}
-                        </div>
-                      )}
-
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        {canPlayThis ? (
-                          <PlayCircle className="w-5 h-5 text-white/90 drop-shadow" />
-                        ) : (
-                          <Lock className="w-4 h-4 text-white/80 drop-shadow" />
-                        )}
+                  {/* Module Header */}
+                  <div className="flex items-center justify-between pb-3 border-b border-border/70">
+                    <div className="flex items-center space-x-2.5">
+                      <div className="p-1.5 rounded-xl bg-primary/10 text-primary">
+                        <FolderOpen className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Module {mIdx + 1}
+                        </span>
+                        <h3 className="text-sm sm:text-base font-bold text-foreground">
+                          {moduleTitle}
+                        </h3>
                       </div>
                     </div>
-
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-mono font-semibold text-muted-foreground">
-                          #{vid.order || idx + 1}
-                        </span>
-                        <h4 className="text-sm font-bold text-foreground hover:text-primary transition-colors">
-                          {vid.title}
-                        </h4>
-                        {(vid.isFreePreview || idx === 0) && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                            FREE PREVIEW
-                          </span>
-                        )}
-                      </div>
-                      {vid.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                          {vid.description}
-                        </p>
-                      )}
+                    <div className="text-right">
+                      <span className="text-xs font-semibold text-muted-foreground block">
+                        {moduleVideos.length} lesson{moduleVideos.length > 1 ? 's' : ''}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted-foreground">
+                        {formatDuration(moduleDuration)}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3 self-end sm:self-center">
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {formatDuration(vid.duration)}
-                    </span>
+                  {/* Module Lessons */}
+                  <div className="space-y-2.5 pt-1">
+                    {moduleVideos.map((vid) => {
+                      const globalIdx = videos.findIndex((v) => v.id === vid.id);
+                      const canPlayThis = isEnrolled || Boolean(vid.isFreePreview) || globalIdx === 0;
+                      const isSelected = activeVideo?.id === vid.id;
+                      const rawThumb = vid.thumbnailUrl || course.thumbnail;
+                      const vidThumb = getMediaUrl(rawThumb);
 
-                    {canPlayThis ? (
-                      <span className="inline-flex items-center space-x-1 text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10">
-                        <PlayCircle className="w-3.5 h-3.5" />
-                        <span>{isSelected && isPlaying ? 'Playing' : 'Watch'}</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center space-x-1 text-xs text-muted-foreground px-2 py-1 rounded-lg bg-muted">
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Locked</span>
-                      </span>
-                    )}
+                      return (
+                        <div
+                          key={vid.id}
+                          onClick={() => handleSelectVideo(vid, globalIdx)}
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer gap-3 ${
+                            isSelected
+                              ? 'border-primary bg-primary/5 shadow-sm'
+                              : canPlayThis
+                              ? 'border-border bg-background hover:border-primary/50'
+                              : 'border-border/60 bg-muted/30 opacity-80'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3.5">
+                            {/* Video Thumbnail */}
+                            <div className="w-24 h-14 rounded-xl overflow-hidden bg-muted relative shrink-0 border border-border group">
+                              {vidThumb ? (
+                                <img
+                                  src={vidThumb}
+                                  alt={vid.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-xs">
+                                  {vid.order || globalIdx + 1}
+                                </div>
+                              )}
+
+                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                {canPlayThis ? (
+                                  <PlayCircle className="w-5 h-5 text-white/90 drop-shadow" />
+                                ) : (
+                                  <Lock className="w-4 h-4 text-white/80 drop-shadow" />
+                                )}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-[10px] font-mono font-semibold text-muted-foreground">
+                                  #{vid.order || globalIdx + 1}
+                                </span>
+                                <h4 className="text-sm font-bold text-foreground hover:text-primary transition-colors">
+                                  {vid.title}
+                                </h4>
+                                {(vid.isFreePreview || globalIdx === 0) && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                    FREE PREVIEW
+                                  </span>
+                                )}
+                              </div>
+                              {vid.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                  {vid.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-3 self-end sm:self-center">
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {formatDuration(vid.duration)}
+                            </span>
+
+                            {canPlayThis ? (
+                              <span className="inline-flex items-center space-x-1 text-xs font-bold text-primary px-2.5 py-1 rounded-lg bg-primary/10">
+                                <PlayCircle className="w-3.5 h-3.5" />
+                                <span>{isSelected && isPlaying ? 'Playing' : 'Watch'}</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 text-xs text-muted-foreground px-2 py-1 rounded-lg bg-muted">
+                                <Lock className="w-3.5 h-3.5" />
+                                <span>Locked</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

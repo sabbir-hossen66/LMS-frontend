@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Course, CourseStatus } from '@/types';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getMediaUrl } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import {
   Plus,
@@ -17,6 +17,10 @@ import {
   Loader2,
   ShieldAlert,
   Upload,
+  X,
+  Sparkles,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 
 export default function AdminCoursesPage() {
@@ -31,6 +35,7 @@ export default function AdminCoursesPage() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('2500');
   const [status, setStatus] = useState<CourseStatus>('PUBLISHED');
+  const [contentStatus, setContentStatus] = useState<'ONGOING' | 'COMPLETED'>('ONGOING');
   const [thumbnail, setThumbnail] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,6 +58,7 @@ export default function AdminCoursesPage() {
     setDescription('');
     setPrice('2500');
     setStatus('PUBLISHED');
+    setContentStatus('ONGOING');
     setThumbnail('');
     setFormError(null);
     setIsModalOpen(true);
@@ -64,6 +70,7 @@ export default function AdminCoursesPage() {
     setDescription(c.description);
     setPrice(c.price.toString());
     setStatus(c.status);
+    setContentStatus((c.contentStatus as any) === 'COMPLETED' ? 'COMPLETED' : 'ONGOING');
     setThumbnail(c.thumbnail || '');
     setFormError(null);
     setIsModalOpen(true);
@@ -80,6 +87,7 @@ export default function AdminCoursesPage() {
         description: description.trim(),
         price: parseFloat(price) || 0,
         status,
+        contentStatus,
         thumbnail: thumbnail.trim() || undefined,
       };
 
@@ -165,19 +173,54 @@ export default function AdminCoursesPage() {
           {courses.map((c) => (
             <div
               key={c.id}
-              className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between"
+              className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
             >
-              <div>
+              {/* Optional Thumbnail header */}
+              {c.thumbnail && (
+                <div className="relative w-full h-36 bg-muted overflow-hidden">
+                  <img
+                    src={getMediaUrl(c.thumbnail)}
+                    alt={c.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 right-2">
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full backdrop-blur-md shadow-sm ${
+                        c.contentStatus === 'COMPLETED'
+                          ? 'bg-emerald-500/90 text-white'
+                          : 'bg-amber-500/90 text-white'
+                      }`}
+                    >
+                      {c.contentStatus === 'COMPLETED' ? '✓ Complete' : '● Ongoing'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <span
-                    className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      c.status === 'PUBLISHED'
-                        ? 'bg-emerald-500/10 text-emerald-500'
-                        : 'bg-amber-500/10 text-amber-500'
-                    }`}
-                  >
-                    {c.status}
-                  </span>
+                  <div className="flex items-center space-x-1.5">
+                    <span
+                      className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        c.status === 'PUBLISHED'
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : 'bg-amber-500/10 text-amber-500'
+                      }`}
+                    >
+                      {c.status}
+                    </span>
+                    {!c.thumbnail && (
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          c.contentStatus === 'COMPLETED'
+                            ? 'bg-emerald-500/10 text-emerald-600'
+                            : 'bg-amber-500/10 text-amber-600'
+                        }`}
+                      >
+                        {c.contentStatus === 'COMPLETED' ? '✓ Complete' : '● Ongoing'}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm font-extrabold text-foreground">
                     {formatPrice(c.price)}
                   </span>
@@ -191,13 +234,13 @@ export default function AdminCoursesPage() {
                 <div className="mt-4 flex items-center space-x-4 text-xs text-muted-foreground">
                   <div className="flex items-center space-x-1 font-medium">
                     <Video className="w-3.5 h-3.5 text-primary" />
-                    <span>{c.totalVideos || 0} Videos</span>
+                    <span>{c.totalVideos || 0} Lessons</span>
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-2">
+              <div className="p-4 pt-0 border-t border-border flex items-center justify-between gap-2 mt-auto">
                 <Link
                   href={`/admin/courses/${c.id}/videos`}
                   className="flex items-center space-x-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
@@ -302,6 +345,26 @@ export default function AdminCoursesPage() {
                 </div>
               </div>
 
+              {/* Content Status (Ongoing vs Completed) */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Course Content Status (কোর্স প্রগ্রেস)
+                </label>
+                <select
+                  value={contentStatus}
+                  onChange={(e) => setContentStatus(e.target.value as 'ONGOING' | 'COMPLETED')}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="ONGOING">🟡 Ongoing Course (চলমান কোর্স - নিয়মিত নতুন ভিডিও আসছে)</option>
+                  <option value="COMPLETED">🟢 Complete Course (সম্পূর্ণ কোর্স - সব মডিউল ও ভিডিও সমাপ্ত)</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {contentStatus === 'ONGOING'
+                    ? 'শিক্ষার্থীরা দেখবে এই কোর্সে এখনো ভিডিও আপলোড চলমান রয়েছে।'
+                    : 'শিক্ষার্থীরা দেখবে এই কোর্সের সকল ভিডিও এবং মডিউল পূর্ণাঙ্গভাবে প্রস্তুত।'}
+                </p>
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1">
                   Thumbnail Image (File or URL)
@@ -327,12 +390,29 @@ export default function AdminCoursesPage() {
                     className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90 cursor-pointer"
                   />
                   <input
-                    type="url"
+                    type="text"
                     value={thumbnail}
                     onChange={(e) => setThumbnail(e.target.value)}
-                    placeholder="Or enter direct URL: https://images.unsplash.com/..."
+                    placeholder="Uploaded path /uploads/thumbnails/... or external URL"
                     className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+                  {thumbnail && (
+                    <div className="relative w-full h-36 rounded-xl overflow-hidden border border-border bg-muted/40 group">
+                      <img
+                        src={getMediaUrl(thumbnail)}
+                        alt="Thumbnail Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setThumbnail('')}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white hover:bg-black transition-colors"
+                        title="Remove thumbnail"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Course, Video } from '@/types';
-import { formatDuration } from '@/lib/utils';
+import { formatDuration, getMediaUrl } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import {
   ChevronLeft,
@@ -19,6 +19,8 @@ import {
   CheckCircle,
   AlertCircle,
   Sparkles,
+  Layers,
+  FolderOpen,
 } from 'lucide-react';
 
 export default function CourseVideosManagementPage() {
@@ -32,6 +34,7 @@ export default function CourseVideosManagementPage() {
 
   // New video metadata form
   const [videoTitle, setVideoTitle] = useState('');
+  const [moduleName, setModuleName] = useState('Module 1: Introduction');
   const [videoDesc, setVideoDesc] = useState('');
   const [order, setOrder] = useState('1');
   const [videoThumbnailUrl, setVideoThumbnailUrl] = useState<string | null>(null);
@@ -111,6 +114,7 @@ export default function CourseVideosManagementPage() {
       await apiClient.post('/videos', {
         courseId,
         title: videoTitle.trim(),
+        moduleName: moduleName.trim() || 'Module 1: Introduction',
         description: videoDesc.trim() || undefined,
         thumbnailUrl: videoThumbnailUrl || undefined,
         isFreePreview,
@@ -153,6 +157,13 @@ export default function CourseVideosManagementPage() {
   }
 
   const videos = course?.videos || [];
+
+  const groupedModules = videos.reduce((acc, v) => {
+    const mod = v.moduleName || 'Module 1: Introduction';
+    if (!acc[mod]) acc[mod] = [];
+    acc[mod].push(v);
+    return acc;
+  }, {} as Record<string, Video[]>);
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-5xl">
@@ -258,6 +269,28 @@ export default function CourseVideosManagementPage() {
           <form onSubmit={handleCreateVideo} className="space-y-3 pt-2">
             <div>
               <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                Module / Section Name
+              </label>
+              <input
+                type="text"
+                list="modules-list"
+                required
+                value={moduleName}
+                onChange={(e) => setModuleName(e.target.value)}
+                placeholder="e.g. Module 1: Introduction"
+                className="w-full px-3 py-2 rounded-xl border border-border bg-background text-xs font-medium focus:ring-2 focus:ring-primary"
+              />
+              <datalist id="modules-list">
+                {Array.from(new Set(videos.map((v) => v.moduleName || 'Module 1: Introduction'))).map(
+                  (mod) => (
+                    <option key={mod} value={mod} />
+                  ),
+                )}
+              </datalist>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">
                 Lesson Title
               </label>
               <input
@@ -323,64 +356,90 @@ export default function CourseVideosManagementPage() {
         </div>
 
         {/* Existing Lessons List */}
-        <div className="md:col-span-2 space-y-3">
-          <h3 className="text-sm font-bold">Uploaded Lessons</h3>
+        <div className="md:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold flex items-center space-x-2">
+              <Layers className="w-4 h-4 text-primary" />
+              <span>Organized Course Modules ({Object.keys(groupedModules).length})</span>
+            </h3>
+            <span className="text-xs text-muted-foreground">{videos.length} Total Lessons</span>
+          </div>
 
           {videos.length === 0 ? (
             <div className="p-8 text-center border border-dashed border-border rounded-2xl text-muted-foreground text-sm">
               No videos added yet. Use the upload panel to add lessons.
             </div>
           ) : (
-            videos.map((vid, idx) => (
+            Object.entries(groupedModules).map(([moduleTitle, moduleVideos]) => (
               <div
-                key={vid.id}
-                className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-primary/40 transition-all shadow-sm"
+                key={moduleTitle}
+                className="rounded-2xl border border-border bg-card/60 overflow-hidden shadow-sm space-y-2 p-4"
               >
-                <div className="flex items-center space-x-3.5">
-                  {/* Thumbnail / Order preview */}
-                  <div className="w-16 h-10 rounded-lg overflow-hidden bg-muted relative shrink-0 border border-border/80">
-                    {vid.thumbnailUrl ? (
-                      <img
-                        src={vid.thumbnailUrl}
-                        alt={vid.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-xs">
-                        {vid.order || idx + 1}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-semibold flex items-center space-x-2">
-                      <span>{vid.title}</span>
-                      {vid.isFreePreview && (
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                          PREVIEW
-                        </span>
-                      )}
+                <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                  <div className="flex items-center space-x-2">
+                    <FolderOpen className="w-4 h-4 text-primary" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      {moduleTitle}
                     </h4>
-                    <span className="text-[11px] font-mono text-muted-foreground">
-                      {formatDuration(vid.duration)}
-                    </span>
                   </div>
+                  <span className="text-[11px] font-semibold text-muted-foreground">
+                    {moduleVideos.length} lesson{moduleVideos.length > 1 ? 's' : ''}
+                  </span>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Link
-                    href={`/watch/${courseId}/${vid.id}`}
-                    target="_blank"
-                    className="px-3 py-1 text-xs rounded-lg bg-muted text-foreground hover:bg-primary hover:text-primary-foreground transition-colors font-medium"
-                  >
-                    Preview
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteVideo(vid.id)}
-                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="space-y-2 pt-1">
+                  {moduleVideos.map((vid, idx) => (
+                    <div
+                      key={vid.id}
+                      className="flex items-center justify-between p-3 rounded-xl border border-border bg-background hover:border-primary/40 transition-all shadow-xs"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-14 h-9 rounded-lg overflow-hidden bg-muted relative shrink-0 border border-border/80">
+                          {vid.thumbnailUrl ? (
+                            <img
+                              src={getMediaUrl(vid.thumbnailUrl)}
+                              alt={vid.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-xs">
+                              {vid.order || idx + 1}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <h5 className="text-xs font-semibold flex items-center space-x-2">
+                            <span>{vid.title}</span>
+                            {vid.isFreePreview && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                PREVIEW
+                              </span>
+                            )}
+                          </h5>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {formatDuration(vid.duration)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Link
+                          href={`/courses/${courseId}`}
+                          target="_blank"
+                          className="px-2.5 py-1 text-[11px] rounded-lg bg-muted text-foreground hover:bg-primary hover:text-primary-foreground transition-colors font-medium"
+                        >
+                          View
+                        </Link>
+                        <button
+                          onClick={() => handleDeleteVideo(vid.id)}
+                          className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))

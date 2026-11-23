@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { Course } from '@/types';
-import { formatPrice } from '@/lib/utils';
-import { BookOpen, Video, Users, CheckCircle, ArrowRight, Sparkles, PlayCircle } from 'lucide-react';
+import { formatPrice, getMediaUrl } from '@/lib/utils';
+import { BookOpen, Video, Users, CheckCircle, ArrowRight, Sparkles, PlayCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
 export default function HomePage() {
@@ -100,7 +100,7 @@ export default function HomePage() {
                   <div className="relative h-48 bg-muted overflow-hidden">
                     {course.thumbnail ? (
                       <img
-                        src={course.thumbnail}
+                        src={getMediaUrl(course.thumbnail)}
                         alt={course.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -109,6 +109,30 @@ export default function HomePage() {
                         <PlayCircle className="w-12 h-12 text-primary opacity-60" />
                       </div>
                     )}
+
+                    {/* Content Status Pill */}
+                    <div className="absolute top-3 left-3">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-md backdrop-blur-md flex items-center space-x-1 ${
+                          course.contentStatus === 'COMPLETED'
+                            ? 'bg-emerald-600/90 text-white'
+                            : 'bg-amber-500/90 text-white'
+                        }`}
+                      >
+                        {course.contentStatus === 'COMPLETED' ? (
+                          <>
+                            <CheckCircle className="w-3 h-3" />
+                            <span>Complete Course</span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="w-3 h-3" />
+                            <span>Ongoing</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+
                     {course.isEnrolled && (
                       <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500 text-white flex items-center space-x-1 shadow-md">
                         <CheckCircle className="w-3.5 h-3.5" />
