@@ -157,7 +157,7 @@ export default function StudentDashboardPage() {
 
       {/* Continue Watching Section */}
       {continueWatching && (
-        <section className="rounded-3xl border border-primary/30 bg-gradient-to-r from-primary/5 via-blue-500/5 to-transparent p-6 sm:p-8 shadow-sm">
+        <section className="rounded-3xl border border-primary/30 bg-gradient-to-r from-primary/10 via-amber-500/5 to-transparent p-6 sm:p-8 shadow-sm">
           <div className="flex items-center space-x-2 text-xs font-bold text-primary uppercase tracking-wider mb-3">
             <Sparkles className="w-4 h-4" />
             <span>Continue Watching</span>

@@ -15,16 +15,16 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         {/* Brand */}
-        <Link href="/" className="flex items-center space-x-2.5">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-md shadow-primary/25">
+        <Link href="/" className="flex items-center space-x-2.5 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 flex items-center justify-center text-white font-bold shadow-lg shadow-orange-500/25 group-hover:scale-105 transition-transform duration-300">
             <GraduationCap className="w-6 h-6" />
           </div>
           <div>
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
-              Antigravity
+            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-orange-600 via-amber-500 to-rose-500 bg-clip-text text-transparent">
+              Sabbir Academy
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1.5 px-1.5 py-0.5 rounded bg-muted">
-              LMS
+            <span className="text-[10px] font-bold uppercase tracking-wider text-primary ml-1.5 px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+              PRO
             </span>
           </div>
         </Link>

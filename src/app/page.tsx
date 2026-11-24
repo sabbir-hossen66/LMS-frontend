@@ -29,19 +29,19 @@ export default function HomePage() {
     <div className="container mx-auto px-4 py-12">
       {/* Hero Section */}
       <section className="text-center max-w-3xl mx-auto mb-16 pt-6">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4 border border-primary/20">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Next-Gen Enterprise Engineering LMS</span>
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-4 border border-primary/25 shadow-sm backdrop-blur-xs">
+          <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+          <span>Sabbir Academy • Coding • CS Theory • Soft Skills</span>
         </div>
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6">
-          Master Modern Tech with{' '}
-          <span className="bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Real-World Projects
+          Level Up Your Tech Career with{' '}
+          <span className="bg-gradient-to-r from-orange-600 via-amber-500 to-rose-500 bg-clip-text text-transparent">
+            Sabbir Academy
           </span>
         </h1>
-        <p className="text-lg text-muted-foreground leading-relaxed mb-8">
-          Production-grade curriculum built for engineers. Enjoy high-speed seekable range video streaming,
-          interactive dashboards, and streamlined payment flows.
+        <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto">
+          Production-grade curriculum covering full-stack software engineering, core computer science theory,
+          clean architecture, and career-defining soft skills.
         </p>
 
         {/* Search Bar */}
@@ -114,7 +114,7 @@ export default function HomePage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-blue-500/10">
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-amber-500/10">
                         <PlayCircle className="w-12 h-12 text-primary opacity-60" />
                       </div>
                     )}

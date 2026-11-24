@@ -476,7 +476,7 @@ export function VideoPlayer({
             }}
             className="absolute pointer-events-none z-20 text-[11px] font-mono text-white/30 select-none bg-black/40 px-2.5 py-0.5 rounded backdrop-blur-xs transition-all duration-1000"
           >
-            {user.email || user.name} • Antigravity LMS
+            {user.email || user.name} • Sabbir Academy
           </div>
         )}
       </div>
