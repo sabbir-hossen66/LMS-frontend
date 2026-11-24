@@ -102,6 +102,15 @@ export default function HomePage() {
                       <img
                         src={getMediaUrl(course.thumbnail)}
                         alt={course.title}
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const fallbackUrl = `https://lms-backend-production-40b7da73.up.railway.app${course.thumbnail?.startsWith('/') ? course.thumbnail : '/' + course.thumbnail}`;
+                          if (target.src !== fallbackUrl) {
+                            target.src = fallbackUrl;
+                          } else {
+                            target.style.display = 'none';
+                          }
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (

@@ -499,11 +499,18 @@ export function VideoPlayer({
         onProgress={handleProgress}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
-        onError={() => {
+        onError={(e) => {
           setIsLoading(false);
-          setHasError(
-            'Unable to stream protected media. Please verify course enrollment status.',
-          );
+          const mediaError = (e.currentTarget as HTMLVideoElement).error;
+          if (mediaError?.code === 4) {
+            setHasError(
+              'Video media file is currently unavailable or unsupported by browser. Tip: Use .mp4 or YouTube/URL link for zero-delay streaming.',
+            );
+          } else {
+            setHasError(
+              'Unable to stream media. Please verify video status or course enrollment.',
+            );
+          }
         }}
         onClick={togglePlay}
         onDoubleClick={(e) => {

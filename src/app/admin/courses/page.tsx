@@ -181,6 +181,13 @@ export default function AdminCoursesPage() {
                   <img
                     src={getMediaUrl(c.thumbnail)}
                     alt={c.title}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      const fallback = `https://lms-backend-production-40b7da73.up.railway.app${c.thumbnail?.startsWith('/') ? c.thumbnail : '/' + c.thumbnail}`;
+                      if (target.src !== fallback) {
+                        target.src = fallback;
+                      }
+                    }}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2 right-2">
@@ -401,6 +408,13 @@ export default function AdminCoursesPage() {
                       <img
                         src={getMediaUrl(thumbnail)}
                         alt="Thumbnail Preview"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const fallback = `https://lms-backend-production-40b7da73.up.railway.app${thumbnail?.startsWith('/') ? thumbnail : '/' + thumbnail}`;
+                          if (target.src !== fallback) {
+                            target.src = fallback;
+                          }
+                        }}
                         className="w-full h-full object-cover"
                       />
                       <button

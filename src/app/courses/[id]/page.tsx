@@ -127,6 +127,13 @@ export default function CourseDetailPage() {
               <img
                 src={activeThumbnail}
                 alt={activeVideo?.title || course.title}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  const fallbackUrl = `https://lms-backend-production-40b7da73.up.railway.app${rawThumbnail.startsWith('/') ? rawThumbnail : '/' + rawThumbnail}`;
+                  if (target.src !== fallbackUrl) {
+                    target.src = fallbackUrl;
+                  }
+                }}
                 className="w-full h-full object-cover opacity-85 group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />

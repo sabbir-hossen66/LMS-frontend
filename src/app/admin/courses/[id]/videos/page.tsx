@@ -21,6 +21,8 @@ import {
   Sparkles,
   Layers,
   FolderOpen,
+  Edit2,
+  X,
 } from 'lucide-react';
 
 export default function CourseVideosManagementPage() {
@@ -48,6 +50,17 @@ export default function CourseVideosManagementPage() {
   const [videoSourceType, setVideoSourceType] = useState<'FILE' | 'URL'>('FILE');
   const [externalUrl, setExternalUrl] = useState('');
   const [customDurationMinutes, setCustomDurationMinutes] = useState('10');
+
+  // Edit existing video modal state
+  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editModuleName, setEditModuleName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editOrder, setEditOrder] = useState('1');
+  const [editThumbnailUrl, setEditThumbnailUrl] = useState<string | null>(null);
+  const [isUploadingEditThumb, setIsUploadingEditThumb] = useState(false);
+  const [editIsFreePreview, setEditIsFreePreview] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Fetch course details
   const { data: course, isLoading } = useQuery<Course>({
@@ -162,6 +175,60 @@ export default function CourseVideosManagementPage() {
       await queryClient.invalidateQueries({ queryKey: ['course-videos-admin', courseId] });
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete video');
+    }
+  };
+
+  const openEditModal = (vid: Video) => {
+    setEditingVideo(vid);
+    setEditTitle(vid.title);
+    setEditModuleName(vid.moduleName || 'Module 1: Introduction');
+    setEditDesc(vid.description || '');
+    setEditOrder(vid.order ? vid.order.toString() : '1');
+    setEditThumbnailUrl(vid.thumbnailUrl || null);
+    setEditIsFreePreview(Boolean(vid.isFreePreview));
+  };
+
+  const handleUpdateVideo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVideo) return;
+
+    setIsSavingEdit(true);
+    try {
+      await apiClient.patch(`/videos/${editingVideo.id}`, {
+        title: editTitle.trim(),
+        moduleName: editModuleName.trim() || 'Module 1: Introduction',
+        description: editDesc.trim() || undefined,
+        thumbnailUrl: editThumbnailUrl || null,
+        isFreePreview: editIsFreePreview,
+        order: parseInt(editOrder, 10) || 1,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['course-videos-admin', courseId] });
+      setEditingVideo(null);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update video lesson');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleEditThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingEditThumb(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await apiClient.post('/videos/upload-thumbnail', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setEditThumbnailUrl(res.data.data.thumbnailUrl);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Thumbnail image upload failed');
+    } finally {
+      setIsUploadingEditThumb(false);
     }
   };
 
@@ -505,7 +572,7 @@ export default function CourseVideosManagementPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1.5">
                         <Link
                           href={`/courses/${courseId}`}
                           target="_blank"
@@ -514,6 +581,15 @@ export default function CourseVideosManagementPage() {
                           View
                         </Link>
                         <button
+                          type="button"
+                          onClick={() => openEditModal(vid)}
+                          title="Edit Lesson"
+                          className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDeleteVideo(vid.id)}
                           className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                         >
@@ -528,6 +604,155 @@ export default function CourseVideosManagementPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Lesson Modal */}
+      {editingVideo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h2 className="text-lg font-bold">Edit Lesson & Thumbnail</h2>
+              <button
+                type="button"
+                onClick={() => setEditingVideo(null)}
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateVideo} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Lesson Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    Module / Section Name
+                  </label>
+                  <input
+                    type="text"
+                    list="modules-list"
+                    required
+                    value={editModuleName}
+                    onChange={(e) => setEditModuleName(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    Lesson Order #
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editOrder}
+                    onChange={(e) => setEditOrder(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Lesson Thumbnail */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Lesson Thumbnail Image (Optional)
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={isUploadingEditThumb}
+                    onChange={handleEditThumbnailUpload}
+                    className="w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90 cursor-pointer"
+                  />
+                  {isUploadingEditThumb && (
+                    <p className="text-xs text-primary flex items-center space-x-1.5">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Uploading thumbnail...</span>
+                    </p>
+                  )}
+                  {editThumbnailUrl && (
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border bg-muted/40">
+                      <img
+                        src={getMediaUrl(editThumbnailUrl)}
+                        alt="Lesson Thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditThumbnailUrl(null)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white hover:bg-black text-xs"
+                        title="Remove thumbnail"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                  Description (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary resize-none"
+                />
+              </div>
+
+              {/* Free Preview Toggle */}
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="editIsFreePreview"
+                  checked={editIsFreePreview}
+                  onChange={(e) => setEditIsFreePreview(e.target.checked)}
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                />
+                <label
+                  htmlFor="editIsFreePreview"
+                  className="text-xs font-semibold text-foreground cursor-pointer flex items-center space-x-1"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Allow Free Preview for Guests/Students</span>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setEditingVideo(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-medium hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity flex items-center space-x-2 disabled:opacity-50"
+                >
+                  {isSavingEdit && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
