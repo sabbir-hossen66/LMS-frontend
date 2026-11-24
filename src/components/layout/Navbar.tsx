@@ -39,6 +39,14 @@ export function Navbar() {
           >
             Courses Catalog
           </Link>
+          <Link
+            href="/contact"
+            className={`text-sm font-medium transition-colors hover:text-primary ${
+              pathname === '/contact' ? 'text-primary font-bold' : 'text-muted-foreground'
+            }`}
+          >
+            Contact Us
+          </Link>
           {user && (
             <>
               <Link
