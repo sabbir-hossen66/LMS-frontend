@@ -11,6 +11,13 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Sabbir Academy - Master Coding, CS Theory & Soft Skills',
   description: 'Production-grade engineering academy by Sabbir Hossen. Learn full-stack development, algorithms, system design theory, and career-accelerating soft skills.',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

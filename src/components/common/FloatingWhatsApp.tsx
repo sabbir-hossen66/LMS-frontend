@@ -9,21 +9,31 @@ export function FloatingWhatsApp() {
   );
 
   return (
-    <a
-      href={`https://wa.me/${phoneRaw}?text=${defaultMsg}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Chat on WhatsApp with Sabbir Hossen"
-      className="fixed bottom-6 right-6 z-50 flex items-center space-x-2 bg-[#25D366] text-white px-3.5 py-3 rounded-full shadow-2xl shadow-[#25D366]/40 hover:bg-[#20ba5a] hover:scale-105 active:scale-95 transition-all duration-300 group"
-    >
-      <div className="w-6 h-6 flex items-center justify-center">
-        <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
-        </svg>
+    <div className="fixed bottom-6 right-6 z-50 flex items-center group">
+      {/* Tooltip on hover */}
+      <div className="pointer-events-none absolute right-16 sm:right-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-x-1 whitespace-nowrap bg-neutral-900 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl border border-white/10 hidden sm:flex items-center space-x-1.5">
+        <span>Chat with Sabbir</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-ping" />
       </div>
-      <span className="hidden sm:inline-block text-xs font-bold tracking-wide pr-1">
-        Chat with Sabbir
-      </span>
-    </a>
+
+      <a
+        href={`https://wa.me/${phoneRaw}?text=${defaultMsg}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat on WhatsApp with Sabbir Hossen"
+        className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#25D366] hover:bg-[#20ba5a] text-white flex items-center justify-center shadow-[0_10px_25px_-5px_rgba(37,211,102,0.5)] hover:scale-110 active:scale-95 transition-all duration-300"
+      >
+        {/* Soft pulsing halo animation */}
+        <span className="absolute -inset-1 rounded-full bg-[#25D366]/30 animate-ping pointer-events-none" />
+
+        {/* Real Official WhatsApp Vector Icon */}
+        <svg
+          className="w-8 h-8 sm:w-9 sm:h-9 fill-white relative z-10 drop-shadow-sm"
+          viewBox="0 0 24 24"
+        >
+          <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.28-2.42 5.84a8.18 8.18 0 01-5.82 2.41h-.01c-1.42 0-2.82-.38-4.04-1.1l-.29-.17-3.01.79.8-2.93-.19-.3a8.16 8.16 0 01-1.25-4.29c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.8 1-.15.19-.29.21-.54.08-.25-.13-1.05-.39-2-1.23-.74-.66-1.24-1.48-1.39-1.73-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44s-.56-1.35-.77-1.85c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.12.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.29z" />
+        </svg>
+      </a>
+    </div>
   );
 }
