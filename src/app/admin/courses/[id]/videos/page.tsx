@@ -23,6 +23,7 @@ import {
   FolderOpen,
   Edit2,
   X,
+  Clock,
 } from 'lucide-react';
 
 export default function CourseVideosManagementPage() {
@@ -57,10 +58,12 @@ export default function CourseVideosManagementPage() {
   const [editModuleName, setEditModuleName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editOrder, setEditOrder] = useState('1');
+  const [editDurationSeconds, setEditDurationSeconds] = useState('0');
   const [editThumbnailUrl, setEditThumbnailUrl] = useState<string | null>(null);
   const [isUploadingEditThumb, setIsUploadingEditThumb] = useState(false);
   const [editIsFreePreview, setEditIsFreePreview] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isCreatingVideo, setIsCreatingVideo] = useState(false);
 
   // Fetch course details
   const { data: course, isLoading } = useQuery<Course>({
@@ -96,6 +99,21 @@ export default function CourseVideosManagementPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Immediately detect video duration client-side from file container
+    try {
+      const tempVideo = document.createElement('video');
+      tempVideo.preload = 'metadata';
+      tempVideo.src = URL.createObjectURL(file);
+      tempVideo.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(tempVideo.src);
+        if (tempVideo.duration && !isNaN(tempVideo.duration) && isFinite(tempVideo.duration) && tempVideo.duration > 0) {
+          setDetectedDuration(Math.round(tempVideo.duration));
+        }
+      };
+    } catch (err) {
+      console.warn('Could not read video metadata client-side', err);
+    }
+
     setIsUploading(true);
     setUploadError(null);
 
@@ -109,8 +127,10 @@ export default function CourseVideosManagementPage() {
 
       const { storageKey, duration, mimeType } = res.data.data;
       setUploadedStorageKey(storageKey);
-      setDetectedDuration(duration || 0);
-      setDetectedMime(mimeType || 'video/mp4');
+      if (duration && duration > 0) {
+        setDetectedDuration(duration);
+      }
+      setDetectedMime(mimeType || file.type || 'video/mp4');
       if (!videoTitle) {
         setVideoTitle(file.name.replace(/\.[^/.]+$/, ''));
       }
@@ -124,6 +144,8 @@ export default function CourseVideosManagementPage() {
 
   const handleCreateVideo = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreatingVideo) return; // Strictly prevent duplicate creation on double click
+
     const finalStorageKey = videoSourceType === 'URL' ? externalUrl.trim() : uploadedStorageKey;
     const finalDuration =
       videoSourceType === 'URL'
@@ -139,6 +161,7 @@ export default function CourseVideosManagementPage() {
       return;
     }
 
+    setIsCreatingVideo(true);
     try {
       await apiClient.post('/videos', {
         courseId,
@@ -165,6 +188,8 @@ export default function CourseVideosManagementPage() {
       await queryClient.invalidateQueries({ queryKey: ['course-videos-admin', courseId] });
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to add video lesson');
+    } finally {
+      setIsCreatingVideo(false);
     }
   };
 
@@ -184,6 +209,7 @@ export default function CourseVideosManagementPage() {
     setEditModuleName(vid.moduleName || 'Module 1: Introduction');
     setEditDesc(vid.description || '');
     setEditOrder(vid.order ? vid.order.toString() : '1');
+    setEditDurationSeconds((vid.duration || 0).toString());
     setEditThumbnailUrl(vid.thumbnailUrl || null);
     setEditIsFreePreview(Boolean(vid.isFreePreview));
   };
@@ -201,6 +227,7 @@ export default function CourseVideosManagementPage() {
         thumbnailUrl: editThumbnailUrl || null,
         isFreePreview: editIsFreePreview,
         order: parseInt(editOrder, 10) || 1,
+        duration: parseInt(editDurationSeconds, 10) || 0,
       });
 
       await queryClient.invalidateQueries({ queryKey: ['course-videos-admin', courseId] });
@@ -334,10 +361,31 @@ export default function CourseVideosManagementPage() {
                 </p>
               )}
               {uploadedStorageKey && (
-                <p className="text-xs text-emerald-500 mt-2 flex items-center space-x-1">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <span>File uploaded ready</span>
-                </p>
+                <div className="mt-2.5 p-3 rounded-xl border border-border bg-muted/40 space-y-2">
+                  <p className="text-xs text-emerald-500 font-semibold flex items-center space-x-1.5">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span>Video file uploaded successfully</span>
+                  </p>
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-muted-foreground font-medium flex items-center space-x-1">
+                        <Clock className="w-3.5 h-3.5 text-primary" />
+                        <span>Duration:</span>
+                      </span>
+                      <span className="font-bold text-foreground">
+                        {detectedDuration > 0 ? formatDuration(detectedDuration) : '00:00'} ({detectedDuration}s)
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      min="1"
+                      value={detectedDuration || ''}
+                      onChange={(e) => setDetectedDuration(parseInt(e.target.value, 10) || 0)}
+                      placeholder="Duration in seconds"
+                      className="w-full px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-mono focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
               )}
             </div>
           ) : (
@@ -494,12 +542,20 @@ export default function CourseVideosManagementPage() {
             <button
               type="submit"
               disabled={
+                isCreatingVideo ||
                 isUploading ||
                 (videoSourceType === 'FILE' ? !uploadedStorageKey : !externalUrl.trim())
               }
-              className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow hover:opacity-90 disabled:opacity-40 transition-opacity"
+              className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center space-x-2"
             >
-              Add Lesson to Course
+              {isCreatingVideo ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Adding Lesson...</span>
+                </>
+              ) : (
+                <span>Add Lesson to Course</span>
+              )}
             </button>
           </form>
         </div>
@@ -660,6 +716,24 @@ export default function CourseVideosManagementPage() {
                     onChange={(e) => setEditOrder(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary"
                   />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    Duration (Seconds)
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={editDurationSeconds}
+                      onChange={(e) => setEditDurationSeconds(e.target.value)}
+                      placeholder="e.g. 286"
+                      className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm font-mono focus:ring-2 focus:ring-primary"
+                    />
+                    <span className="text-xs font-semibold text-foreground bg-muted px-2.5 py-2 rounded-xl border border-border whitespace-nowrap">
+                      {formatDuration(parseInt(editDurationSeconds, 10) || 0)}
+                    </span>
+                  </div>
                 </div>
               </div>
 

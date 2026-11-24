@@ -378,6 +378,12 @@ export function VideoPlayer({
     const dur = videoRef.current.duration;
     if (!isNaN(dur) && dur > 0) {
       setVideoDuration(dur);
+      // Auto-heal DB duration if it was originally 0
+      if ((!duration || duration === 0) && videoId && typeof window !== 'undefined') {
+        import('@/lib/api-client').then(({ apiClient }) => {
+          apiClient.patch(`/videos/${videoId}`, { duration: Math.round(dur) }).catch(() => {});
+        });
+      }
     }
 
     const savedPos = localStorage.getItem(`lms_video_pos_${videoId}`);
