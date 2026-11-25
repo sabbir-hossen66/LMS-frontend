@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import vm from 'node:vm';
 
 interface CompilerConfig {
   compiler: string;
-  options?: string;
 }
 
 const LANGUAGE_COMPILER_MAP: Record<string, CompilerConfig> = {
@@ -14,6 +14,86 @@ const LANGUAGE_COMPILER_MAP: Record<string, CompilerConfig> = {
   typescript: { compiler: 'typescript-5.6.2' },
   go: { compiler: 'go-1.27.4' },
 };
+
+// Ultra-fast in-memory execution for JavaScript
+function executeJavaScriptLocally(code: string): {
+  success: boolean;
+  output: string;
+  error?: string;
+  exitCode: number;
+} {
+  const logs: string[] = [];
+  const errors: string[] = [];
+
+  const safeConsole = {
+    log: (...args: any[]) => {
+      logs.push(
+        args
+          .map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)))
+          .join(' '),
+      );
+    },
+    info: (...args: any[]) => safeConsole.log(...args),
+    warn: (...args: any[]) => {
+      logs.push('[WARN] ' + args.map((a) => String(a)).join(' '));
+    },
+    error: (...args: any[]) => {
+      errors.push(args.map((a) => String(a)).join(' '));
+    },
+    table: (data: any) => {
+      try {
+        if (Array.isArray(data)) {
+          logs.push(JSON.stringify(data, null, 2));
+        } else {
+          logs.push(JSON.stringify(data, null, 2));
+        }
+      } catch {
+        safeConsole.log(data);
+      }
+    },
+  };
+
+  try {
+    const sandbox = {
+      console: safeConsole,
+      setTimeout: undefined,
+      setInterval: undefined,
+      process: { version: 'v20.17.0', platform: 'linux', env: {} },
+      Math,
+      Date,
+      JSON,
+      Array,
+      Object,
+      String,
+      Number,
+      Boolean,
+      RegExp,
+      Map,
+      Set,
+      Promise,
+      parseInt,
+      parseFloat,
+    };
+
+    const context = vm.createContext(sandbox);
+    const script = new vm.Script(code, { filename: 'solution.js' });
+    script.runInContext(context, { timeout: 3000 }); // 3-second limit
+
+    return {
+      success: errors.length === 0,
+      output: logs.join('\n') + (logs.length > 0 ? '\n' : ''),
+      error: errors.join('\n'),
+      exitCode: errors.length > 0 ? 1 : 0,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      output: logs.join('\n'),
+      error: err?.stack || err?.message || 'Runtime execution error',
+      exitCode: 1,
+    };
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,6 +107,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const startTime = Date.now();
+
+    // 1. Instant execution path for JavaScript (Runs in ~1-5ms without network latency)
+    if (language === 'javascript' && !stdin) {
+      const localRes = executeJavaScriptLocally(code);
+      const executionTimeMs = Math.max(1, Date.now() - startTime);
+
+      return NextResponse.json({
+        success: localRes.success,
+        output: localRes.output,
+        error: localRes.error || '',
+        compilerMessage: '',
+        exitCode: localRes.exitCode,
+        executionTimeMs,
+      });
+    }
+
+    // 2. Sandboxed compiler engine for C, C++, Python, Rust, Go, TypeScript
     const config = LANGUAGE_COMPILER_MAP[language];
     if (!config) {
       return NextResponse.json(
@@ -35,7 +133,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const startTime = Date.now();
     const payload: Record<string, any> = {
       compiler: config.compiler,
       code,
@@ -48,7 +145,10 @@ export async function POST(req: NextRequest) {
 
     const response = await fetch('https://wandbox.org/api/compile.json', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Connection: 'keep-alive',
+      },
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
