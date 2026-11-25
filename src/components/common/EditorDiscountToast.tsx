@@ -65,7 +65,7 @@ export function EditorDiscountToast() {
   const currentPromo = DISCOUNT_PROMOS[promoIndex];
 
   return (
-    <div className="fixed bottom-6 right-4 sm:right-6 z-50 max-w-sm w-full animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
+    <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-sm z-50 animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-auto">
       <div className="relative bg-[#1c1d22]/95 backdrop-blur-xl border border-primary/40 rounded-2xl p-3.5 shadow-2xl shadow-primary/20 text-white overflow-hidden group">
         {/* Subtle orange accent glow line */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary to-orange-400" />

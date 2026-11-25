@@ -426,6 +426,16 @@ export default function CodeEditorPage() {
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
 
+  // Mobile View Switcher: 'code' | 'preview'
+  const [mobileTab, setMobileTab] = useState<'code' | 'preview'>('code');
+
+  // Auto-close explorer drawer on mobile on initial load
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsExplorerOpen(false);
+    }
+  }, []);
+
   // Right pane tab: 'output' | 'preview' | 'stdin'
   const [activeTab, setActiveTab] = useState<'preview' | 'output' | 'stdin'>('preview');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -463,6 +473,19 @@ export default function CodeEditorPage() {
       setActiveTab('preview');
     } else {
       setActiveTab('output');
+    }
+    // On mobile, reset to code view when switching presets
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setMobileTab('code');
+    }
+  };
+
+  const handleSelectFile = (fileId: string) => {
+    setActiveFileId(fileId);
+    // On mobile, close drawer and switch to code view automatically
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsExplorerOpen(false);
+      setMobileTab('code');
     }
   };
 
@@ -565,6 +588,11 @@ export default function CodeEditorPage() {
   // Compile / Run Code Function
   const runCode = async () => {
     if (isRunning) return;
+
+    // On mobile / tablet (<lg), auto switch to preview / console tab so user sees output
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setMobileTab('preview');
+    }
 
     // If it's a web project with HTML/CSS, switch to browser preview and trigger live reload
     if (selectedPreset.category === 'web' || activeFile.name.endsWith('.html')) {
@@ -670,36 +698,31 @@ export default function CodeEditorPage() {
       <EditorDiscountToast />
 
       {/* Top VS Code Control Bar */}
-      <div className="h-12 border-b border-[#2b2b2b] bg-[#1f1f1f] px-3 flex items-center justify-between gap-3 flex-shrink-0 z-10">
-        {/* Left: Sidebar Toggle & Project Template Selector */}
-        <div className="flex items-center space-x-2">
+      <div className="h-12 border-b border-[#2b2b2b] bg-[#1f1f1f] px-2 sm:px-3 flex items-center justify-between gap-1.5 sm:gap-2 flex-shrink-0 z-10 select-none">
+        {/* Left: Files Toggle & Project Template Selector */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
           <button
             onClick={() => setIsExplorerOpen((prev) => !prev)}
-            title={isExplorerOpen ? 'Hide Explorer Sidebar (Ctrl+B)' : 'Show Explorer Sidebar (Ctrl+B)'}
-            className={`p-1.5 rounded-lg border transition-all text-xs flex items-center space-x-1.5 ${
+            title={isExplorerOpen ? 'Hide Files' : 'Show Files'}
+            className={`p-1.5 rounded-lg border transition-all text-xs flex items-center space-x-1 flex-shrink-0 ${
               isExplorerOpen
                 ? 'bg-neutral-800 text-primary border-primary/40'
                 : 'text-neutral-400 hover:text-white border-[#3c3c3c] bg-[#252526]'
             }`}
           >
-            {isExplorerOpen ? <PanelLeftClose className="w-4 h-4 text-primary" /> : <PanelLeftOpen className="w-4 h-4" />}
-            <span className="hidden sm:inline font-mono text-[11px] font-semibold">
-              {isExplorerOpen ? 'Explorer' : 'Explorer'}
-            </span>
+            <FolderOpen className="w-4 h-4 text-primary" />
+            <span className="hidden sm:inline font-mono text-[11px] font-semibold">Files</span>
           </button>
 
-          <div className="h-4 w-[1px] bg-neutral-700 mx-1 hidden sm:block" />
-
           {/* Project Preset Selector */}
-          <div className="flex items-center space-x-1.5 bg-[#252526] border border-[#3c3c3c] rounded-lg px-2.5 py-1 text-xs">
-            <span className="text-neutral-400 font-mono text-[11px] hidden md:inline">Preset:</span>
+          <div className="flex items-center bg-[#252526] border border-[#3c3c3c] rounded-lg px-1.5 sm:px-2 py-1 text-xs truncate max-w-[120px] sm:max-w-none">
             <select
               value={selectedPreset.id}
               onChange={(e) => {
                 const found = PROJECT_PRESETS.find((p) => p.id === e.target.value);
                 if (found) handlePresetChange(found);
               }}
-              className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer pr-1 truncate"
               aria-label="Select Project Template"
             >
               {PROJECT_PRESETS.map((p) => (
@@ -716,8 +739,45 @@ export default function CodeEditorPage() {
           </span>
         </div>
 
+        {/* Center: Mobile View Switcher (Segmented Control for Code vs Preview/Console) */}
+        <div className="flex lg:hidden items-center bg-[#252526] p-0.5 rounded-lg border border-[#3c3c3c] flex-shrink-0">
+          <button
+            onClick={() => setMobileTab('code')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-md flex items-center space-x-1 transition-all ${
+              mobileTab === 'code'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span>Code</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-md flex items-center space-x-1 transition-all relative ${
+              mobileTab === 'preview'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            {selectedPreset.category === 'web' ? (
+              <Globe className="w-3.5 h-3.5" />
+            ) : (
+              <Terminal className="w-3.5 h-3.5" />
+            )}
+            <span>{selectedPreset.category === 'web' ? 'Preview' : 'Console'}</span>
+            {exitCode !== null && (
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  exitCode === 0 ? 'bg-green-400' : 'bg-red-400'
+                }`}
+              />
+            )}
+          </button>
+        </div>
+
         {/* Right Actions: Font Size, Reset, Copy, and Run Code */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
           {/* Font Size Selector */}
           <div className="hidden lg:flex items-center space-x-1 text-[11px] text-neutral-400 bg-[#252526] px-2 py-1 rounded border border-[#3c3c3c]">
             <span>Font:</span>
@@ -737,27 +797,27 @@ export default function CodeEditorPage() {
           <button
             onClick={handleResetProject}
             title="Reset files to original preset"
-            className="p-1.5 rounded-lg bg-[#252526] hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all text-xs flex items-center space-x-1 border border-[#3c3c3c]"
+            className="p-1.5 rounded-lg bg-[#252526] hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all text-xs hidden sm:flex items-center space-x-1 border border-[#3c3c3c]"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reset</span>
+            <span className="hidden md:inline">Reset</span>
           </button>
 
           {/* Copy Active File */}
           <button
             onClick={handleCopyCode}
             title="Copy current file code"
-            className="p-1.5 rounded-lg bg-[#252526] hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all text-xs flex items-center space-x-1 border border-[#3c3c3c]"
+            className="p-1.5 rounded-lg bg-[#252526] hover:bg-neutral-700 text-neutral-300 hover:text-white transition-all text-xs hidden sm:flex items-center space-x-1 border border-[#3c3c3c]"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+            <span className="hidden md:inline">{copied ? 'Copied' : 'Copy'}</span>
           </button>
 
           {/* RUN CODE BUTTON */}
           <button
             onClick={runCode}
             disabled={isRunning}
-            className={`px-3.5 py-1.5 rounded-xl text-white font-semibold text-xs flex items-center space-x-1.5 shadow-md transition-all active:scale-95 disabled:cursor-not-allowed ${
+            className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl text-white font-semibold text-xs flex items-center space-x-1 sm:space-x-1.5 shadow-md transition-all active:scale-95 disabled:cursor-not-allowed ${
               isRunning
                 ? 'bg-neutral-800 border border-primary/50 text-primary shadow-primary/20 animate-pulse'
                 : 'bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-400 shadow-orange-500/25 hover:shadow-orange-500/40'
@@ -766,12 +826,15 @@ export default function CodeEditorPage() {
             {isRunning ? (
               <>
                 <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="font-mono">Running ({runningElapsed.toFixed(1)}s)...</span>
+                <span className="font-mono text-[11px]">Running...</span>
               </>
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-white" />
-                <span>{selectedPreset.category === 'web' ? 'Run / Preview' : 'Run Code'}</span>
+                <span className="hidden sm:inline">
+                  {selectedPreset.category === 'web' ? 'Run / Preview' : 'Run Code'}
+                </span>
+                <span className="sm:hidden font-bold">Run</span>
                 <span className="hidden md:inline text-[9px] bg-black/20 px-1 py-0.2 rounded font-mono">
                   ⌘+↵
                 </span>
@@ -782,9 +845,9 @@ export default function CodeEditorPage() {
       </div>
 
       {/* Main Workspace Body */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* VS Code Left Activity Bar */}
-        <div className="w-11 bg-[#1e1e1e] border-r border-[#2b2b2b] flex flex-col items-center py-2 space-y-2 flex-shrink-0 select-none z-10">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* VS Code Left Activity Bar (Desktop only) */}
+        <div className="hidden lg:flex w-11 bg-[#1e1e1e] border-r border-[#2b2b2b] flex-col items-center py-2 space-y-2 flex-shrink-0 select-none z-10">
           <button
             onClick={() => setIsExplorerOpen((prev) => !prev)}
             title={isExplorerOpen ? 'Hide File Explorer (Ctrl+B)' : 'Show File Explorer (Ctrl+B)'}
@@ -801,94 +864,106 @@ export default function CodeEditorPage() {
           </button>
         </div>
 
-        {/* 1. VS CODE FILE EXPLORER SIDEBAR */}
+        {/* 1. VS CODE FILE EXPLORER SIDEBAR (Slide-over Drawer on Mobile, Inline on Desktop) */}
         {isExplorerOpen && (
-          <div className="w-52 sm:w-60 bg-[#181818] border-r border-[#2b2b2b] flex flex-col flex-shrink-0 animate-in fade-in duration-150">
-            {/* Explorer Title Bar */}
-            <div className="h-9 px-3 border-b border-[#2b2b2b] flex items-center justify-between text-neutral-400 font-mono text-[11px] uppercase tracking-wider font-semibold">
-              <span className="flex items-center space-x-1.5">
-                <FolderOpen className="w-3.5 h-3.5 text-primary" />
-                <span>Explorer</span>
-              </span>
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={() => setIsCreatingFile(true)}
-                  title="New File"
-                  className="p-1 rounded hover:bg-neutral-800 hover:text-white transition-colors"
-                >
-                  <FilePlus className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setIsExplorerOpen(false)}
-                  title="Collapse Sidebar (Ctrl+B)"
-                  className="p-1 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
-                >
-                  <PanelLeftClose className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* File List */}
-            <div className="flex-1 overflow-y-auto py-1">
-              <div className="px-3 py-1 text-[10px] text-neutral-500 font-mono uppercase tracking-wider">
-                {selectedPreset.name.split(' ')[0]} Project
-              </div>
-
-              {files.map((file) => {
-                const isActive = file.id === activeFileId;
-                return (
-                  <div
-                    key={file.id}
-                    onClick={() => setActiveFileId(file.id)}
-                    className={`group px-3 py-1.5 flex items-center justify-between text-xs cursor-pointer font-mono transition-colors ${
-                      isActive
-                        ? 'bg-[#37373d] text-white border-l-2 border-primary font-semibold'
-                        : 'text-neutral-400 hover:bg-[#2a2d2e] hover:text-neutral-200'
-                    }`}
+          <>
+            {/* Mobile Backdrop */}
+            <div
+              onClick={() => setIsExplorerOpen(false)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-200"
+            />
+            {/* Drawer for Mobile, Inline for Desktop */}
+            <div className="fixed inset-y-0 left-0 z-50 w-72 bg-[#181818] border-r border-[#2b2b2b] flex flex-col lg:relative lg:inset-auto lg:z-auto lg:w-56 sm:w-60 lg:flex-shrink-0 shadow-2xl lg:shadow-none animate-in slide-in-from-left duration-200">
+              {/* Explorer Title Bar */}
+              <div className="h-10 px-3 border-b border-[#2b2b2b] flex items-center justify-between text-neutral-400 font-mono text-[11px] uppercase tracking-wider font-semibold bg-[#1f1f1f] lg:bg-transparent">
+                <span className="flex items-center space-x-1.5">
+                  <FolderOpen className="w-3.5 h-3.5 text-primary" />
+                  <span>Files & Explorer</span>
+                </span>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setIsCreatingFile(true)}
+                    title="New File"
+                    className="p-1.5 rounded hover:bg-neutral-800 hover:text-white transition-colors"
                   >
-                    <div className="flex items-center space-x-2 truncate">
-                      {getFileIcon(file.name)}
-                      <span className="truncate">{file.name}</span>
-                    </div>
-
-                    {file.isDeletable && (
-                      <button
-                        onClick={(e) => handleDeleteFile(e, file.id)}
-                        title="Delete file"
-                        className="opacity-0 group-hover:opacity-100 hover:text-red-400 p-0.5 transition-opacity"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Inline Input for New File Creation */}
-              {isCreatingFile && (
-                <div className="px-3 py-1.5 flex items-center space-x-1.5 bg-[#252526]">
-                  <FilePlus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                  <input
-                    ref={newFileInputRef}
-                    type="text"
-                    value={newFileName}
-                    onChange={(e) => setNewFileName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCreateFile();
-                      if (e.key === 'Escape') setIsCreatingFile(false);
-                    }}
-                    onBlur={handleCreateFile}
-                    placeholder="e.g. style.css"
-                    className="w-full bg-neutral-900 border border-primary/50 text-white text-xs font-mono px-1.5 py-0.5 rounded focus:outline-none"
-                  />
+                    <FilePlus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsExplorerOpen(false)}
+                    title="Close"
+                    className="p-1.5 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              )}
+              </div>
+
+              {/* File List */}
+              <div className="flex-1 overflow-y-auto py-2">
+                <div className="px-3 py-1 text-[10px] text-neutral-500 font-mono uppercase tracking-wider">
+                  {selectedPreset.name.split(' ')[0]} Project
+                </div>
+
+                {files.map((file) => {
+                  const isActive = file.id === activeFileId;
+                  return (
+                    <div
+                      key={file.id}
+                      onClick={() => handleSelectFile(file.id)}
+                      className={`group px-3 py-2 flex items-center justify-between text-xs cursor-pointer font-mono transition-colors ${
+                        isActive
+                          ? 'bg-[#37373d] text-white border-l-2 border-primary font-semibold'
+                          : 'text-neutral-400 hover:bg-[#2a2d2e] hover:text-neutral-200'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 truncate">
+                        {getFileIcon(file.name)}
+                        <span className="truncate">{file.name}</span>
+                      </div>
+
+                      {file.isDeletable && (
+                        <button
+                          onClick={(e) => handleDeleteFile(e, file.id)}
+                          title="Delete file"
+                          className="opacity-70 lg:opacity-0 group-hover:opacity-100 hover:text-red-400 p-1 transition-opacity"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Inline Input for New File Creation */}
+                {isCreatingFile && (
+                  <div className="px-3 py-2 flex items-center space-x-1.5 bg-[#252526]">
+                    <FilePlus className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                    <input
+                      ref={newFileInputRef}
+                      type="text"
+                      value={newFileName}
+                      onChange={(e) => setNewFileName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCreateFile();
+                        if (e.key === 'Escape') setIsCreatingFile(false);
+                      }}
+                      onBlur={handleCreateFile}
+                      placeholder="e.g. style.css"
+                      className="w-full bg-neutral-900 border border-primary/50 text-white text-xs font-mono px-2 py-1 rounded focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* 2. CENTER: MONACO CODE EDITOR WITH TABS */}
-        <div className="flex-1 flex flex-col min-w-0 border-r border-[#2b2b2b] bg-[#1e1e1e]">
+        <div
+          className={`flex-1 flex-col min-w-0 border-r border-[#2b2b2b] bg-[#1e1e1e] ${
+            mobileTab === 'code' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
           {/* Top File Tabs */}
           <div className="h-9 bg-[#252526] border-b border-[#1e1e1e] flex items-center overflow-x-auto scrollbar-none">
             {!isExplorerOpen && (
@@ -957,7 +1032,24 @@ export default function CodeEditorPage() {
         </div>
 
         {/* 3. RIGHT PANE: LIVE BROWSER PREVIEW & TERMINAL CONSOLE */}
-        <div className="w-full lg:w-[480px] xl:w-[540px] flex flex-col bg-[#141414] flex-shrink-0">
+        <div
+          className={`w-full lg:w-[480px] xl:w-[540px] flex-col bg-[#141414] flex-shrink-0 ${
+            mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          {/* Mobile Back to Code Bar */}
+          <div className="lg:hidden px-3 py-2 bg-[#1a1a1a] border-b border-[#2b2b2b] flex items-center justify-between">
+            <button
+              onClick={() => setMobileTab('code')}
+              className="text-xs font-semibold text-primary flex items-center space-x-1.5 bg-primary/10 border border-primary/25 px-2.5 py-1 rounded-lg hover:bg-primary/20 transition-all"
+            >
+              <ChevronRight className="w-3.5 h-3.5 rotate-180" />
+              <span>← Back to Code</span>
+            </button>
+            <span className="text-[11px] text-neutral-400 font-mono">
+              File: <strong className="text-white">{activeFile.name}</strong>
+            </span>
+          </div>
           {/* Tab Navigation: Preview vs Output vs stdin */}
           <div className="h-9 border-b border-[#2b2b2b] bg-[#1a1a1a] px-2 flex items-center justify-between">
             <div className="flex items-center space-x-1">
