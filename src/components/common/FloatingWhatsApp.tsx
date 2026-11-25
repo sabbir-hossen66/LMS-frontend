@@ -1,8 +1,15 @@
 'use client';
 
 import React from 'react';
+import { usePathname } from 'next/navigation';
 
 export function FloatingWhatsApp() {
+  const pathname = usePathname();
+
+  // Hide WhatsApp bubble on the Code Editor page
+  if (pathname?.startsWith('/editor')) {
+    return null;
+  }
   const phoneRaw = '8801783780066';
   const defaultMsg = encodeURIComponent(
     'Hi Sabbir Bhai, I would like to get more information about courses at Sabbir Academy.',

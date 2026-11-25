@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   Bot,
   Send,
@@ -41,6 +42,13 @@ const INITIAL_BOT_MESSAGE: ChatMessage = {
 const STORAGE_KEY = 'sabbir_academy_chat_history_v1';
 
 export function ChatWidget() {
+  const pathname = usePathname();
+
+  // Hide AI Chatbot widget on the Code Editor page
+  if (pathname?.startsWith('/editor')) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
