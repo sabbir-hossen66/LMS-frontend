@@ -238,7 +238,8 @@ export default function CodeEditorPage() {
     const startTime = Date.now();
 
     try {
-      const res = await fetch(`${API_BASE}/compiler/execute`, {
+      // Execute via Next.js Route Handler (instant, zero-config on Vercel) with fallback to backend
+      let res = await fetch('/api/compiler/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -247,6 +248,18 @@ export default function CodeEditorPage() {
           stdin,
         }),
       });
+
+      if (!res.ok) {
+        res = await fetch(`${API_BASE}/compiler/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            language: selectedLang.id,
+            code,
+            stdin,
+          }),
+        });
+      }
 
       if (!res.ok) {
         throw new Error(`Execution service responded with status ${res.status}`);
