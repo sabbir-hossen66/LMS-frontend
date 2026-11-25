@@ -40,6 +40,17 @@ export function Navbar() {
             Courses Catalog
           </Link>
           <Link
+            href="/editor"
+            className={`text-sm font-medium transition-colors hover:text-primary flex items-center space-x-1.5 ${
+              pathname === '/editor' ? 'text-primary font-bold' : 'text-muted-foreground'
+            }`}
+          >
+            <span>Code Studio</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-primary/15 text-primary uppercase tracking-wider">
+              Compiler
+            </span>
+          </Link>
+          <Link
             href="/contact"
             className={`text-sm font-medium transition-colors hover:text-primary ${
               pathname === '/contact' ? 'text-primary font-bold' : 'text-muted-foreground'
