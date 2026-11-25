@@ -9,9 +9,9 @@ export function FloatingWhatsApp() {
   );
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex items-center group">
+    <div className="fixed bottom-6 left-6 z-50 flex items-center group">
       {/* Tooltip on hover */}
-      <div className="pointer-events-none absolute right-16 sm:right-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-x-1 whitespace-nowrap bg-neutral-900 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl border border-white/10 hidden sm:flex items-center space-x-1.5">
+      <div className="pointer-events-none absolute left-16 sm:left-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1 whitespace-nowrap bg-neutral-900 text-white text-xs font-semibold px-3 py-1.5 rounded-xl shadow-xl border border-white/10 hidden sm:flex items-center space-x-1.5">
         <span>Chat with Sabbir</span>
         <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-ping" />
       </div>

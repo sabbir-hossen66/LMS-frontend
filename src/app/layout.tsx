@@ -4,6 +4,7 @@ import '@/styles/globals.css';
 import { Providers } from '@/components/providers';
 import { Navbar } from '@/components/layout/Navbar';
 import { FloatingWhatsApp } from '@/components/common/FloatingWhatsApp';
+import { ChatWidget } from '@/components/common/ChatWidget';
 import Link from 'next/link';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -95,6 +96,7 @@ export default function RootLayout({
             <Navbar />
             <main className="flex-1">{children}</main>
             <FloatingWhatsApp />
+            <ChatWidget />
             <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
               <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p>© {new Date().getFullYear()} Sabbir Academy. Empowering the Next Generation of Engineers.</p>
